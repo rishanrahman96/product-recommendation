@@ -103,4 +103,7 @@ class Neural_networkN(torch.nn.Module):
         return x
 ```
 
+## Part 5: Creating the training loop
+
+Now that we have created our model and our dataset, we can use a training loop to achieve the weights of our model which shall be used in the feature extraction stage. To do this, we loop through our train dataloader, for each batch we make a prediction which is then used to calculate a loss. This is then backpropogated through the neural network.
 
