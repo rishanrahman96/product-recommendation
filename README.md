@@ -1,10 +1,10 @@
 # facebook_product_recommendations
 
-## Part 1: Retrieving the data
+## Part 1: Retrieving The Data
 
 The dataset for this task was stored in an EC2 instance in AWS. To access this, I needed to SSH into it. To do this, I needed to download the private key from the S3 bucket. After configuring the connection to the EC2 and SSH'ing into it, there are two csv files and a folder containing product images. The two csv files are products.csv and images.csv. They contain information about the products such as the price, location, description, id etc whilst image.csv contains information about the images, such as their image and product id. This will be used in the data cleaning step.
 
-## Part 2: Cleaning the data
+## Part 2: Cleaning The Data
 
 The images.csv file has an id column which matches with the product_id column in the products.csv file. The products.csv also has a columns category which is used to apply a category to. For example "Home & Garden" would correspond to category 0 or "Appliances" which would correspond to category 1. To do this, we needed to extract the root category from the categories column, which can be done with a simple string method as shown below:
 
@@ -35,7 +35,7 @@ The data was also cleaned of rogue ',' in columns and £ signs.
 
 The Images folder from the EC2 instance also had to be cleaned in prep for deep learning. We needed to make sure that all the images were consistent, i.e the same size, the same number of channels. To do this, clean_images.py was created to process the images.
 
-## Part 3: Creating the pytorch dataset
+## Part 3: Creating The PyTorch Dataset
 
 Next up, we created a custom pytorch dataset. This readied the data to be used in machine learning models. For example, you can't just feed a machine learning model an image. It needs to be changed in a way that is understood by computers. The way to do this is to convert everything into torch tensors and pytorch is a framework which makes this super easy.
 
@@ -71,3 +71,36 @@ class Images(Dataset):
         return len(self.df)
 ```
 This Images class is then later used to define the dataset. Which will be used in the training process of the model.
+
+## Part 4: Creating The Model & Transfer Learning
+
+The whole point of this project is to return recommendations based on a certain product. To do that, we're first going to create an image classification model. As we're dealing with images, it is useful to use a deep learning model here. To do so, I used a convolutional neural network, however instead of custom making my own (a huge and time consuming task), I made the most of existing models. 
+
+In this project, I used the resnet50 which performs a 1000 way classification on the imagenet dataset. So, you might think great, let's move on, but we can't quite do that yet. This is because resnet50 is not finetuned to our dataset. To do this, we used transfer learning to freeze all but the last two layers of the model. You can see this in the code below:
+
+```python
+
+class Neural_networkN(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.resnet50 = models.resnet50(pretrained=True)
+
+        for name, module in self.resnet50.named_modules():
+            if name == 'layer4' or name == 'fc':
+                for param in module.parameters():
+                    param.requires_grad = True
+        else:
+            for param in module.parameters():
+                param.requires_grad = False
+
+
+        out_features = self.resnet50.fc.out_features
+        self.linear = nn.Linear(1000, 13)
+        self.main = nn.Sequential(self.resnet50, self.linear)
+        
+    def forward(self, inp):
+        x = self.main(inp)
+        return x
+```
+
+
