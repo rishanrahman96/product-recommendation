@@ -32,3 +32,5 @@ We also created an encoder for the categories which would be used later in the p
  df3.to_csv('training_data.csv')
 ```
 The data was also cleaned of rogue ',' in columns and £ signs.
+
+The Images folder from the EC2 instance also had to be cleaned in prep for deep learning. We needed to make sure that all the images were consistent, i.e the same size, the same number of channels. To do this, clean_images.py was created to process the images.
