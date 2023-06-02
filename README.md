@@ -105,7 +105,7 @@ class Neural_networkN(torch.nn.Module):
 
 ## Part 5: Creating the training loop
 
-Now that we have created our model and our dataset, we can use a training loop to achieve the weights of our model which shall be used in the feature extraction stage. To do this, we loop through our train dataloader, for each batch we make a prediction which is then used to calculate a loss. This is then backpropogated through the neural network. A training and validation loss is calculated for each epoch along with a validation accuracy. This, combined with our tensorboard visualisations are used to decide which epoch to use for the model weights. The weights are also stored in a folder called model evaluation.
+Now that we have created our model and our dataset, we can use a training loop to achieve the weights of our model which shall be used in the feature extraction stage. To do this, we loop through our train dataloader, for each batch we make a prediction which is then used to calculate a loss. This is then backpropogated through the neural network. A training and validation loss is calculated for each epoch along with a validation accuracy. This, combined with our tensorboard visualisations are used to decide which epoch to use for the model weights. The weights are also stored in a folder called model evaluation. Initially, we reduced the size of our image to 64 x 64 in the custom pytorch dataset. This is because CUDA is not available on m1 macbook pros and it's own metal gpu does not increase the speed of computation enough. By lowering the image size, the task is less computationally intensive. We can then warm start the model again using the desired size and preloading the weights from before.
 
 ```python
 
@@ -218,4 +218,28 @@ model.load_state_dict(torch.load(weights_path))
 train(model, train_dataloader, val_dataloader, epochs=10)
 
 ```
+
+## Part 6: Extracting High Level Features
+
+Our previous task created an image classification model, but for our end goal of comparing similar products, this is not actually what we need. In reality, we need to extract high level features from each image, i.e we want a vector to represent each image. The reason we do the image classification to start with is to achieve better vector embeddings for each image (Remember the resnet50 is not finetuned to our task). If we remove the last two fully connected layers of the neural network, we're left with just this.
+
+
+```python
+
+from neural_network import Neural_networkN
+import torch
+import os
+
+model = Neural_networkN()
+weights_path = '/Users/rishanrahman/Desktop/product-recommendation/model_evaluation_full/2023-06-01_16-32-15/weights/epoch_2.pt'
+model.load_state_dict(torch.load(weights_path))
+model = torch.nn.Sequential(*list(model.children())[:-2])
+
+save_path = 'final_model/image_model.pt'
+os.makedirs(os.path.dirname(save_path), exist_ok=True)
+torch.save(model.state_dict(), save_path)
+
+
+```
+
 
