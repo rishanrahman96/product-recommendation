@@ -241,5 +241,5 @@ torch.save(model.state_dict(), save_path)
 
 
 ```
-
+This provides a vector with 1000 rows, containing high level features of each image which can be used for FAISS search.
 
