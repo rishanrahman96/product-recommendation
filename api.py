@@ -14,11 +14,8 @@ from torchvision import transforms, models
 import  numpy as np
 import faiss
 
-##############################################################
-# TODO                                                       #
-# Import your image processing script here                 #
-##############################################################
 
+#Loading in neural network model
 class Neural_network(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -31,7 +28,6 @@ class Neural_network(torch.nn.Module):
             else:
                 for param in module.parameters():
                     param.requires_grad = False
-
 
         out_features = self.resnet50.fc.out_features
         self.linear = nn.Linear(1000, 13)
@@ -47,27 +43,22 @@ class Neural_network(torch.nn.Module):
         with torch.no_grad():
             x = self.forward(image)
             return x
-
     
-
-    
-# Don't change this, it will be useful for one of the methods in the API
 class TextItem(BaseModel):
     text: str
 
-
-
+#Trying to load in model weights from feature extraction model, as well as removing last two layers of the network defined above
 try:
 
     model = Neural_network()
     weights_path = 'epoch_10.pt'
     model.load_state_dict(torch.load(weights_path))
     model = torch.nn.Sequential(*list(model.children())[:-2])
-
-    pass
+    
 except:
     raise OSError("No Feature Extraction model found. Check that you have the decoder and the model in the correct location")
 
+#Loading in pickle fine containing image id's and embeddings
 try:                 
     # Specify the path to your pickle file
     pickle_file_path = 'image_embedding.pkl'
@@ -79,17 +70,18 @@ try:
 except:
     raise OSError("No Image model found. Check that you have the encoder and the model in the correct location")
 
-
+#Initialising the app
 app = FastAPI()
 print("Starting server")
 
+#Providing a get method to show that the API is up and running well
 @app.get('/healthcheck')
 def healthcheck():
   msg = "API is up and running!"
   
   return {"message": msg}
 
-  
+#Providing post method to extract feature embeddings. Images selected are also transformed like they are in previous scripts
 @app.post('/predict/feature_embedding')
 def predict_image(image: UploadFile = File(...)):
     pil_image = Image.open(image.file)
@@ -104,16 +96,10 @@ def predict_image(image: UploadFile = File(...)):
     
     features = transform(pil_image).unsqueeze(0)
     embeddings = model(features)
-    
-
-
     return JSONResponse(content={
-    "features": embeddings.detach().numpy().tolist()
-    
-        })
+    "features": embeddings.detach().numpy().tolist()})
 
-
-  
+#Providing post method to take it one step further and find 5 nearest neighbours using FAISS search
 @app.post('/predict/similar_images')
 def predict_combined(image: UploadFile = File(...)):
     pil_image = Image.open(image.file)
@@ -122,13 +108,12 @@ def predict_combined(image: UploadFile = File(...)):
         transforms.CenterCrop(256),
         transforms.RandomHorizontalFlip(p=0.3),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
-    ])
-    
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) ])
+   
     features = transform(pil_image).unsqueeze(0)
     embeddings = model(features)
 
-    # Specify the path to your pickle file
+    # Specify the path to file
     pickle_file_path = '/Users/rishanrahman/Desktop/aicore-fb-project/image_embedding.pkl'
 
     # Load the pickle file
@@ -174,10 +159,7 @@ def predict_combined(image: UploadFile = File(...)):
     nearest_neighbors_embeddings = [embeddings_list[i] for i in indices[0]]
 
     return JSONResponse(content={
-        "similar_index": nearest_neighbors_ids
-    })
-
-
+        "similar_index": nearest_neighbors_ids})
 
 if __name__ == '__main__':
   uvicorn.run("api:app", host="0.0.0.0", port=8080)
